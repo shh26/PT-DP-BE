@@ -14,13 +14,29 @@ class ProjectApiView(APIView):
     # Create Project
     def post(self, request, id=None):
         try:
-            serializer = ProjectSerializer(data=request.data)
+            data = request.data.copy()
+
+            # Extract team_member IDs from the request data
+            team_member_ids = data.pop('team_member', None)
+
+            # Serialize the project data
+            serializer = ProjectSerializer(data=data)
+            
             if serializer.is_valid():
-                serializer.save()
+                # Save the project instance
+                project = serializer.save()
+                
+                # If team_member_ids are provided, set them after saving the project
+                if team_member_ids is not None:
+                    project.team_member.set(team_member_ids)
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         except Project.DoesNotExist:
             return Response({"message": "Project does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        
         except Exception as e:
             return Response({"message": f'Something went wrong: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
